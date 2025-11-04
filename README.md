@@ -6,15 +6,17 @@ An intelligent HR CV filtering system powered by Google Gemini AI. This applicat
 
 - 📄 **Multi-format CV Support**: Upload CVs in PDF, DOCX, TXT, or MD formats
 - 🤖 **AI-Powered Evaluation**: Uses Google Gemini to analyze and evaluate CVs
-- 📋 **Custom Rules**: Define custom evaluation criteria
+- 📋 **Custom Rules Management**: Create, update, delete evaluation rules stored in MongoDB
 - 💬 **Interactive Chat**: Ask questions about evaluated CVs
 - 🎯 **Job Description Matching**: Automatically matches CVs against job requirements
 - 🔄 **Dynamic Context**: Agent automatically reads all available fields and provides hints
+- 💾 **MongoDB Integration**: Persistent storage for custom evaluation rules
 
 ## Prerequisites
 
 - Python 3.10+
 - Google API Key (Gemini)
+- MongoDB Atlas account or local MongoDB instance
 - Docker & Docker Compose (for containerized deployment)
 
 ## Installation
@@ -43,9 +45,12 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-5. Add your Google API key to `.env`:
+5. Add your credentials to `.env`:
 ```
 GOOGLE_API_KEY=your_google_api_key_here
+MONGO_URI=mongodb+srv://username:password@cluster.mongodb.net/
+MONGO_DB=hr_cv_filter_agent
+MONGO_COLLECTION=rules
 ```
 
 6. Run the application:
@@ -85,7 +90,11 @@ docker-compose down
 ## Usage
 
 1. **Enter Job Description**: Paste the job description in the left panel
-2. **Set Custom Rules** (Optional): Add specific evaluation criteria
+2. **Manage Custom Rules**:
+   - Select existing rules from dropdown
+   - Create new rules with name and content
+   - Update or delete existing rules
+   - All rules are stored in MongoDB
 3. **Upload CVs**: Upload one or multiple CV files
 4. **Review Evaluations**: View AI-generated evaluations for each CV
 5. **Chat with Agent**: Ask questions about the evaluated CVs
@@ -100,6 +109,10 @@ HR_CVFilter_Agent/
 │   │   └── HR_CVFilter_agent.py   # Main agent logic
 │   ├── llms/
 │   │   └── geminiLLM.py          # Gemini LLM wrapper
+│   ├── models/
+│   │   └── rule_model.py         # MongoDB rule model
+│   ├── services/
+│   │   └── rule_service.py       # MongoDB CRUD service
 │   ├── prompt/
 │   │   ├── context_builder.py    # Context building logic
 │   │   └── system_prompt.md      # System prompt template
@@ -120,6 +133,8 @@ The application follows a clean architecture pattern:
 - **Context Builder**: Dynamically builds prompts with job description, custom rules, and hints
 - **Agent**: Orchestrates CV evaluation and chat interactions
 - **LLM Wrapper**: Handles communication with Google Gemini API
+- **MongoDB Service**: Manages CRUD operations for custom rules
+- **Rule Model**: Data model for evaluation rules
 - **CV Extractor**: Extracts text from various document formats
 - **Streamlit UI**: Provides interactive web interface
 
@@ -142,6 +157,9 @@ The agent automatically:
 | Variable | Description | Required |
 |----------|-------------|----------|
 | `GOOGLE_API_KEY` | Google Gemini API key | Yes |
+| `MONGO_URI` | MongoDB connection URI | Yes |
+| `MONGO_DB` | MongoDB database name | No (default: hr_cv_filter_agent) |
+| `MONGO_COLLECTION` | MongoDB collection name | No (default: rules) |
 
 ## Docker Configuration
 
@@ -169,6 +187,13 @@ If container fails to start:
 ```bash
 docker-compose logs hr-cv-filter-agent
 ```
+
+### MongoDB Connection Issues
+If you see "Failed to connect to MongoDB":
+- Verify `MONGO_URI` is correct in `.env` file
+- Check MongoDB Atlas network access settings
+- Ensure your IP is whitelisted in MongoDB Atlas
+- Test connection using MongoDB Compass
 
 ### Port Already in Use
 If port 8501 is already in use, modify `docker-compose.yml`:

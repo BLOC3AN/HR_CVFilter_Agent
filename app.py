@@ -2,8 +2,16 @@ import streamlit as st
 from src.agent.HR_CVFilter_agent import HRCVFilterAgent
 from src.utils.cv_extractor import CVExtractor
 from src.utils.logger import Logger
+from src.services.rule_service import RuleService
 
 logger = Logger(__name__)
+
+# Initialize RuleService
+try:
+    rule_service = RuleService()
+except Exception as e:
+    logger.error(f"Failed to initialize RuleService: {str(e)}")
+    rule_service = None
 
 # Page config
 st.set_page_config(
@@ -25,6 +33,12 @@ if 'custom_rules' not in st.session_state:
     st.session_state.custom_rules = ""
 if 'llm_model' not in st.session_state:
     st.session_state.llm_model = "gemini-2.0-flash"
+if 'selected_rule_name' not in st.session_state:
+    st.session_state.selected_rule_name = None
+if 'rule_content' not in st.session_state:
+    st.session_state.rule_content = ""
+if 'rule_description' not in st.session_state:
+    st.session_state.rule_description = ""
 
 # Title
 st.title("📄 HR CV Filter Agent")
@@ -85,13 +99,112 @@ with col1:
     st.session_state.job_description = job_description
     
     st.header("📋 Custom Evaluation Rules")
-    custom_rules = st.text_area(
-        "Enter custom rules for CV evaluation (optional)",
-        value=st.session_state.custom_rules,
-        height=150,
-        placeholder="Example:\n- Prioritize candidates with 5+ years experience\n- Must have Python skills\n- Prefer candidates with ML background"
-    )
-    st.session_state.custom_rules = custom_rules
+
+    if rule_service is None:
+        st.error("MongoDB connection failed. Please check your MONGO_URI in .env file.")
+    else:
+        # Get all rule names
+        rule_names = rule_service.get_all_rule_names()
+
+        # Rule selection
+        col_select, col_new = st.columns([3, 1])
+        with col_select:
+            selected_rule = st.selectbox(
+                "Select a rule",
+                options=["-- Create New --"] + rule_names,
+                index=0 if st.session_state.selected_rule_name is None else
+                      (rule_names.index(st.session_state.selected_rule_name) + 1 if st.session_state.selected_rule_name in rule_names else 0)
+            )
+
+        # Load selected rule
+        if selected_rule != "-- Create New --" and selected_rule != st.session_state.selected_rule_name:
+            rule = rule_service.get_rule_by_name(selected_rule)
+            if rule:
+                st.session_state.selected_rule_name = selected_rule
+                st.session_state.rule_content = rule.rules
+                st.session_state.rule_description = rule.description
+                st.session_state.custom_rules = rule.rules
+        elif selected_rule == "-- Create New --":
+            st.session_state.selected_rule_name = None
+
+        # Rule name input (for create/update)
+        rule_name = st.text_input(
+            "Rule Name",
+            value=st.session_state.selected_rule_name if st.session_state.selected_rule_name else "",
+            placeholder="Enter rule name..."
+        )
+
+        # Rule description
+        rule_description = st.text_input(
+            "Description (optional)",
+            value=st.session_state.rule_description,
+            placeholder="Brief description of this rule..."
+        )
+        st.session_state.rule_description = rule_description
+
+        # Rule content
+        rule_content = st.text_area(
+            "Rule Content",
+            value=st.session_state.rule_content,
+            height=150,
+            placeholder="Example:\n- Prioritize candidates with 5+ years experience\n- Must have Python skills\n- Prefer candidates with ML background"
+        )
+        st.session_state.rule_content = rule_content
+        st.session_state.custom_rules = rule_content
+
+        # Action buttons
+        col_create, col_update, col_delete = st.columns(3)
+
+        with col_create:
+            if st.button("Create Rule", use_container_width=True):
+                if not rule_name:
+                    st.error("Please enter a rule name")
+                elif not rule_content:
+                    st.error("Please enter rule content")
+                elif rule_name in rule_names:
+                    st.error(f"Rule '{rule_name}' already exists")
+                else:
+                    result = rule_service.create_rule(rule_name, rule_content, rule_description)
+                    if result:
+                        st.success(f"Created rule: {rule_name}")
+                        st.session_state.selected_rule_name = rule_name
+                        st.rerun()
+                    else:
+                        st.error("Failed to create rule")
+
+        with col_update:
+            if st.button("Update Rule", use_container_width=True):
+                if not st.session_state.selected_rule_name:
+                    st.error("Please select a rule to update")
+                elif not rule_content:
+                    st.error("Please enter rule content")
+                else:
+                    result = rule_service.update_rule(
+                        st.session_state.selected_rule_name,
+                        rule_content,
+                        rule_description
+                    )
+                    if result:
+                        st.success(f"Updated rule: {st.session_state.selected_rule_name}")
+                        st.rerun()
+                    else:
+                        st.error("Failed to update rule")
+
+        with col_delete:
+            if st.button("Delete Rule", use_container_width=True):
+                if not st.session_state.selected_rule_name:
+                    st.error("Please select a rule to delete")
+                else:
+                    result = rule_service.delete_rule(st.session_state.selected_rule_name)
+                    if result:
+                        st.success(f"Deleted rule: {st.session_state.selected_rule_name}")
+                        st.session_state.selected_rule_name = None
+                        st.session_state.rule_content = ""
+                        st.session_state.rule_description = ""
+                        st.session_state.custom_rules = ""
+                        st.rerun()
+                    else:
+                        st.error("Failed to delete rule")
 
 with col2:
     st.header("📤 Upload CV Files")
