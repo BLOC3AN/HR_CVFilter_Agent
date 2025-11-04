@@ -25,13 +25,22 @@ class RuleService:
             raise ValueError(error_msg)
         
         try:
-            # MongoDB connection with SSL/TLS settings for Python 3.9 compatibility
+            # Create SSL context for MongoDB connection (Python 3.9 compatibility)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+            # MongoDB connection with SSL/TLS settings
             self.client = MongoClient(
                 self.mongo_uri,
-                serverSelectionTimeoutMS=5000,
-                tls=True,
-                tlsAllowInvalidCertificates=True  # For development - remove in production
+                serverSelectionTimeoutMS=10000,
+                connectTimeoutMS=10000,
+                socketTimeoutMS=10000,
+                ssl_cert_reqs=ssl.CERT_NONE,
+                tlsAllowInvalidCertificates=True
             )
+
+            # Test connection
             self.client.admin.command('ping')
             self.db = self.client[self.db_name]
             self.collection = self.db[self.collection_name]
@@ -42,6 +51,9 @@ class RuleService:
             logger.info(f"✅ Connected to MongoDB: {self.db_name}.{self.collection_name}")
         except ConnectionFailure as e:
             logger.error(f"❌ Failed to connect to MongoDB: {str(e)}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ Unexpected error connecting to MongoDB: {str(e)}")
             raise
     
     def create_rule(self, name: str, rules: str, description: str = "") -> Optional[RuleModel]:
