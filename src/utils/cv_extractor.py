@@ -60,16 +60,16 @@ class CVExtractor:
     def extract(file, file_type: str) -> str:
         """
         Extract text from file based on file type
-        
+
         Args:
             file: Uploaded file object
             file_type: File extension (pdf, docx, txt, md)
-            
+
         Returns:
             Extracted text content
         """
         file_type = file_type.lower()
-        
+
         if file_type == "pdf":
             return CVExtractor.extract_from_pdf(file)
         elif file_type == "docx":
@@ -80,5 +80,33 @@ class CVExtractor:
             return CVExtractor.extract_from_md(file)
         else:
             logger.error(f"❌ Unsupported file type: {file_type}")
+            return ""
+
+    @staticmethod
+    def extract_text(file) -> str:
+        """
+        Extract text from file by auto-detecting file type from filename
+
+        Args:
+            file: Uploaded file object with .name attribute
+
+        Returns:
+            Extracted text content
+        """
+        try:
+            # Get file extension from filename
+            filename = getattr(file, 'name', '')
+            if not filename:
+                logger.error("❌ File has no name attribute")
+                return ""
+
+            # Extract file extension
+            file_ext = filename.split('.')[-1].lower()
+
+            # Extract text based on file type
+            return CVExtractor.extract(file, file_ext)
+
+        except Exception as e:
+            logger.error(f"❌ Error extracting text: {str(e)}")
             return ""
 

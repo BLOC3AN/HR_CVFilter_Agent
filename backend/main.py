@@ -120,16 +120,18 @@ async def chat(request: ChatRequest):
     try:
         # Create agent instance with specified model
         agent = HRCVFilterAgent(llm_model_name=request.llm_model)
-        
+
+        # Add CV evaluations to agent's chat history if provided
+        if request.cv_evaluations:
+            agent.chat_history = request.cv_evaluations
+
         # Chat with agent
         result = agent.chat(
             message=request.message,
             job_description=request.job_description,
-            custom_rules=request.custom_rules,
-            cv_evaluations=request.cv_evaluations,
-            chat_history=request.chat_history
+            custom_rules=request.custom_rules
         )
-        
+
         return {
             "success": True,
             "response": result
