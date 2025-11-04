@@ -28,24 +28,32 @@ st.set_page_config(
 
 # Initialize session state
 if 'cv_evaluations' not in st.session_state:
+    logger.warning("cv_evaluations not in session state")
     st.session_state.cv_evaluations = []
 if 'chat_messages' not in st.session_state:
+    logger.warning("chat_messages not in session state")
     st.session_state.chat_messages = []
 if 'job_description' not in st.session_state:
+    logger.warning("job_description not in session state")
     st.session_state.job_description = ""
 if 'custom_rules' not in st.session_state:
+    logger.warning("custom_rules not in session state")
     st.session_state.custom_rules = ""
 if 'llm_model' not in st.session_state:
+    logger.warning("llm_model not in session state")
     st.session_state.llm_model = "gemini-2.0-flash"
 if 'selected_rule_name' not in st.session_state:
+    logger.warning("selected_rule_name not in session state")
     st.session_state.selected_rule_name = None
 if 'rule_content' not in st.session_state:
+    logger.warning("rule_content not in session state")
     st.session_state.rule_content = ""
 if 'rule_description' not in st.session_state:
+    logger.warning("rule_description not in session state")
     st.session_state.rule_description = ""
 
 # Title
-st.title("📄 HR CV Filter Agent")
+st.title("HR CV Filter Agent")
 st.markdown("---")
 
 # Check backend health
@@ -57,7 +65,7 @@ if health.get("status") != "healthy":
 
 # Sidebar for configuration
 with st.sidebar:
-    st.header("⚙️ Configuration")
+    st.header("Configuration")
     
     # LLM Model selection
     llm_model = st.selectbox(
@@ -66,7 +74,7 @@ with st.sidebar:
         index=0
     )
     st.session_state.llm_model = llm_model
-    
+    logger.info(f"Selected LLM model in session {st.session_state}: {llm_model}")
     st.markdown("---")
     
     # Job Description
@@ -102,6 +110,7 @@ with st.sidebar:
     
     # Load selected rule
     if selected_rule != "-- Create New --" and selected_rule != st.session_state.selected_rule_name:
+        logger.info(f"Loading rule: {selected_rule}")
         rule_response = api_client.get_rule(selected_rule)
         if rule_response.get("success"):
             rule = rule_response.get("rule")
@@ -110,6 +119,7 @@ with st.sidebar:
             st.session_state.rule_description = rule.get("description", "")
             st.session_state.custom_rules = rule.get("rules", "")
     elif selected_rule == "-- Create New --":
+        logger.info("Creating new rule")
         st.session_state.selected_rule_name = None
     
     # Rule name input
@@ -158,6 +168,7 @@ with st.sidebar:
                     st.error(f"Failed to create rule: {result.get('error', 'Unknown error')}")
     
     with col_update:
+
         if st.button("Update Rule", use_container_width=True):
             if not st.session_state.selected_rule_name:
                 st.error("Please select a rule to update")
@@ -169,9 +180,11 @@ with st.sidebar:
                     rule_content,
                     rule_description
                 )
+                logger.info(f"Updated rule: {st.session_state.selected_rule_name}")
                 if result.get("success"):
                     st.success(f"Updated rule: {st.session_state.selected_rule_name}")
                     st.rerun()
+                    logger.info(f"Updated rule: {st.session_state.selected_rule_name}")
                 else:
                     st.error(f"Failed to update rule: {result.get('error', 'Unknown error')}")
     
@@ -188,6 +201,7 @@ with st.sidebar:
                     st.session_state.rule_description = ""
                     st.session_state.custom_rules = ""
                     st.rerun()
+                    logger.info(f"Deleted rule: {st.session_state.selected_rule_name}")
                 else:
                     st.error(f"Failed to delete rule: {result.get('error', 'Unknown error')}")
 
@@ -229,8 +243,10 @@ with col1:
                                     'evaluation': result.get("evaluation", "")
                                 })
                                 st.success(f"✅ Evaluated {uploaded_file.name}")
+                                logger.info(f"Evaluated {uploaded_file.name}")
                             else:
                                 st.error(f"❌ Failed to evaluate {uploaded_file.name}: {result.get('error', 'Unknown error')}")
+                                logger.error(f"Failed to evaluate {uploaded_file.name}: {result.get('error', 'Unknown error')}")
                         except Exception as e:
                             st.error(f"❌ Error processing {uploaded_file.name}: {str(e)}")
                             logger.error(f"Error processing {uploaded_file.name}: {str(e)}")
@@ -247,7 +263,7 @@ with col2:
 
 # Chat section
 st.markdown("---")
-st.header("💬 Chat with Agent")
+st.header("Chat with Agent")
 
 # Display chat messages
 for message in st.session_state.chat_messages:
@@ -277,8 +293,10 @@ if prompt := st.chat_input("Ask questions about the evaluated CVs..."):
                 response = result.get("response", "")
                 st.markdown(response)
                 st.session_state.chat_messages.append({"role": "assistant", "content": response})
+                logger.info(f"Chat response: {response}")
             else:
                 error_msg = f"Error: {result.get('error', 'Unknown error')}"
                 st.error(error_msg)
                 st.session_state.chat_messages.append({"role": "assistant", "content": error_msg})
+                logger.error(f"Chat error: {error_msg}")
 
