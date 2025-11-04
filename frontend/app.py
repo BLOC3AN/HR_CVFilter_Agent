@@ -10,7 +10,7 @@ import os
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from frontend.api_client import APIClient
+from api_client import APIClient
 from src.utils.cv_extractor import CVExtractor
 from src.utils.logger import Logger
 
