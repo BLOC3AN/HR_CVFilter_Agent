@@ -24,14 +24,20 @@ class RuleService:
             raise ValueError(error_msg)
         
         try:
-            self.client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=5000)
+            # MongoDB connection with SSL/TLS settings for Python 3.9 compatibility
+            self.client = MongoClient(
+                self.mongo_uri,
+                serverSelectionTimeoutMS=5000,
+                tls=True,
+                tlsAllowInvalidCertificates=True  # For development - remove in production
+            )
             self.client.admin.command('ping')
             self.db = self.client[self.db_name]
             self.collection = self.db[self.collection_name]
-            
+
             # Create unique index on name
             self.collection.create_index("name", unique=True)
-            
+
             logger.info(f"✅ Connected to MongoDB: {self.db_name}.{self.collection_name}")
         except ConnectionFailure as e:
             logger.error(f"❌ Failed to connect to MongoDB: {str(e)}")

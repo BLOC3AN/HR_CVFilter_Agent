@@ -2,6 +2,30 @@
 
 An intelligent HR CV filtering system powered by Google Gemini AI. This application helps HR professionals automate CV screening and evaluation against job descriptions.
 
+## Architecture
+
+This application follows a **microservices architecture** with two main services:
+
+- **Backend API Service** (FastAPI): Handles AI agent logic, LLM operations, and MongoDB interactions
+- **Frontend UI Service** (Streamlit): Provides user interface and communicates with backend via REST API
+
+```
+┌─────────────────┐         HTTP/REST API        ┌─────────────────┐
+│                 │ ◄──────────────────────────► │                 │
+│  Frontend UI    │                              │  Backend API    │
+│  (Streamlit)    │                              │  (FastAPI)      │
+│  Port: 8501     │                              │  Port: 8000     │
+│                 │                              │                 │
+└─────────────────┘                              └────────┬────────┘
+                                                          │
+                                                          │
+                                                          ▼
+                                                  ┌───────────────┐
+                                                  │   MongoDB     │
+                                                  │   (Rules DB)  │
+                                                  └───────────────┘
+```
+
 ## Features
 
 - 📄 **Multi-format CV Support**: Upload CVs in PDF, DOCX, TXT, or MD formats
@@ -37,7 +61,14 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 3. Install dependencies:
 ```bash
-pip install -r requirements.txt
+# Install backend dependencies
+pip install -r backend/requirements.txt
+
+# Install frontend dependencies
+pip install -r frontend/requirements.txt
+
+# Or install all at once
+make install
 ```
 
 4. Create `.env` file:
@@ -53,12 +84,29 @@ MONGO_DB=hr_cv_filter_agent
 MONGO_COLLECTION=rules
 ```
 
-6. Run the application:
+6. Run the services:
+
+**Option 1: Run both services together**
 ```bash
-streamlit run app.py
+make run
 ```
 
-The app will be available at `http://localhost:8501`
+**Option 2: Run services separately**
+
+Terminal 1 (Backend):
+```bash
+make run-backend
+# Backend API will be available at http://localhost:8000
+```
+
+Terminal 2 (Frontend):
+```bash
+make run-frontend
+# Frontend UI will be available at http://localhost:8501
+```
+
+The frontend will be available at `http://localhost:8501`
+The backend API docs will be available at `http://localhost:8000/docs`
 
 ### Docker Deployment
 
@@ -103,8 +151,18 @@ docker-compose down
 
 ```
 HR_CVFilter_Agent/
-├── app.py                      # Main Streamlit application
-├── src/
+├── backend/                    # Backend API Service
+│   ├── main.py                # FastAPI application
+│   ├── requirements.txt       # Backend dependencies
+│   ├── Dockerfile            # Backend Docker config
+│   └── __init__.py
+├── frontend/                   # Frontend UI Service
+│   ├── app.py                # Streamlit application
+│   ├── api_client.py         # API client for backend
+│   ├── requirements.txt      # Frontend dependencies
+│   ├── Dockerfile           # Frontend Docker config
+│   └── __init__.py
+├── src/                       # Shared source code
 │   ├── agent/
 │   │   └── HR_CVFilter_agent.py   # Main agent logic
 │   ├── llms/
@@ -116,27 +174,34 @@ HR_CVFilter_Agent/
 │   ├── prompt/
 │   │   ├── context_builder.py    # Context building logic
 │   │   └── system_prompt.md      # System prompt template
-│   ├── utils/
-│   │   ├── cv_extractor.py       # CV text extraction
-│   │   └── logger.py             # Logging utility
-├── requirements.txt            # Python dependencies
-├── Dockerfile                  # Docker configuration
-├── docker-compose.yml          # Docker Compose configuration
+│   └── utils/
+│       ├── cv_extractor.py       # CV text extraction
+│       └── logger.py             # Logging utility
+├── docker-compose.yml          # Docker Compose for microservices
+├── Makefile                    # Build and run commands
 ├── .env.example               # Environment variables template
 └── README.md                  # This file
 ```
 
-## Architecture
+## Components
 
-The application follows a clean architecture pattern:
+### Backend API Service (FastAPI)
+- **REST API Endpoints**: `/api/evaluate-cv`, `/api/chat`, `/api/rules/*`
+- **Agent Orchestration**: Manages CV evaluation and chat interactions
+- **LLM Integration**: Communicates with Google Gemini API
+- **MongoDB Service**: CRUD operations for custom rules
+- **Port**: 8000
 
+### Frontend UI Service (Streamlit)
+- **User Interface**: Interactive web UI for CV upload and evaluation
+- **API Client**: Communicates with backend via HTTP
+- **CV Extraction**: Extracts text from PDF, DOCX, TXT, MD files
+- **Port**: 8501
+
+### Shared Components
 - **Context Builder**: Dynamically builds prompts with job description, custom rules, and hints
-- **Agent**: Orchestrates CV evaluation and chat interactions
-- **LLM Wrapper**: Handles communication with Google Gemini API
-- **MongoDB Service**: Manages CRUD operations for custom rules
 - **Rule Model**: Data model for evaluation rules
-- **CV Extractor**: Extracts text from various document formats
-- **Streamlit UI**: Provides interactive web interface
+- **Logger**: Centralized logging utility
 
 ## Key Features
 
