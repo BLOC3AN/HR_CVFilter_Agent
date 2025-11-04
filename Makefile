@@ -1,20 +1,38 @@
-.PHONY: help install run docker-build docker-up docker-down docker-logs clean
+.PHONY: help install install-backend install-frontend run-backend run-frontend run docker-build docker-up docker-down docker-logs clean
 
 help:
 	@echo "Available commands:"
-	@echo "  make install      - Install dependencies"
-	@echo "  make run          - Run the application locally"
-	@echo "  make docker-build - Build Docker image"
-	@echo "  make docker-up    - Start Docker containers"
-	@echo "  make docker-down  - Stop Docker containers"
-	@echo "  make docker-logs  - View Docker logs"
-	@echo "  make clean        - Clean up temporary files"
+	@echo "  make install         - Install all dependencies"
+	@echo "  make install-backend - Install backend dependencies"
+	@echo "  make install-frontend- Install frontend dependencies"
+	@echo "  make run-backend     - Run backend API locally"
+	@echo "  make run-frontend    - Run frontend UI locally"
+	@echo "  make run             - Run both services locally (in background)"
+	@echo "  make docker-build    - Build Docker images"
+	@echo "  make docker-up       - Start Docker containers"
+	@echo "  make docker-down     - Stop Docker containers"
+	@echo "  make docker-logs     - View Docker logs"
+	@echo "  make clean           - Clean up temporary files"
 
-install:
-	pip install -r requirements.txt
+install: install-backend install-frontend
+
+install-backend:
+	pip install -r backend/requirements.txt
+
+install-frontend:
+	pip install -r frontend/requirements.txt
+
+run-backend:
+	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
+
+run-frontend:
+	streamlit run frontend/app.py --server.port=8501
 
 run:
-	streamlit run app.py
+	@echo "Starting backend API..."
+	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
+	@echo "Starting frontend UI..."
+	streamlit run frontend/app.py --server.port=8501
 
 docker-build:
 	docker-compose build

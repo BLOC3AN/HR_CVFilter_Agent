@@ -1,13 +1,14 @@
 version: '3.8'
 
 services:
-  hr-cv-filter-agent:
+  # Backend API Service
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: hr-cv-filter-agent
+      dockerfile: backend/Dockerfile
+    container_name: hr-cv-backend
     ports:
-      - "8501:8501"
+      - "8000:8000"
     environment:
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
       - MONGO_URI=${MONGO_URI}
@@ -16,18 +17,44 @@ services:
     env_file:
       - .env
     volumes:
-      # Mount source code for development (optional - comment out for production)
+      # Mount source code for development
       - ./src:/app/src
-      - ./app.py:/app/app.py
+      - ./backend:/app/backend
       # Mount logs directory
       - ./logs:/app/logs
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - hr-cv-network
+
+  # Frontend UI Service
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: hr-cv-frontend
+    ports:
+      - "8501:8501"
+    environment:
+      - BACKEND_API_URL=http://backend:8000
+    volumes:
+      # Mount source code for development
+      - ./src:/app/src
+      - ./frontend:/app/frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8501/_stcore/health"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 10s
     networks:
       - hr-cv-network
 
