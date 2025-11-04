@@ -6,6 +6,7 @@ WORKDIR /app
 
 # Install system dependencies
 RUN apt-get update \
+    && apt-get install curl \
     && apt-get install -y --no-install-recommends \
     && apt-get install -y ca-certificates \
     && rm -rf /var/lib/apt/lists/*
