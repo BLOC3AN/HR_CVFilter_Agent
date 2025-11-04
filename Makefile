@@ -8,6 +8,7 @@ help:
 	@echo "  make run-backend     - Run backend API locally"
 	@echo "  make run-frontend    - Run frontend UI locally"
 	@echo "  make run             - Run both services locally (in background)"
+	@echo "  make build-frontend  - Build frontend for production"
 	@echo "  make docker-build    - Build Docker images"
 	@echo "  make docker-up       - Start Docker containers"
 	@echo "  make docker-down     - Stop Docker containers"
@@ -20,19 +21,22 @@ install-backend:
 	pip install -r backend/requirements.txt
 
 install-frontend:
-	pip install -r frontend/requirements.txt
+	cd frontend && npm install
 
 run-backend:
 	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 run-frontend:
-	streamlit run frontend/app.py --server.port=8501
+	cd frontend && npm run dev
+
+build-frontend:
+	cd frontend && npm run build
 
 run:
 	@echo "Starting backend API..."
 	cd backend && uvicorn main:app --host 0.0.0.0 --port 8000 --reload &
 	@echo "Starting frontend UI..."
-	streamlit run frontend/app.py --server.port=8501
+	cd frontend && npm run dev
 
 docker-build:
 	docker-compose build

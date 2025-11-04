@@ -7,13 +7,13 @@ An intelligent HR CV filtering system powered by Google Gemini AI. This applicat
 This application follows a **microservices architecture** with two main services:
 
 - **Backend API Service** (FastAPI): Handles AI agent logic, LLM operations, and MongoDB interactions
-- **Frontend UI Service** (Streamlit): Provides user interface and communicates with backend via REST API
+- **Frontend UI Service** (Vite + React): Provides modern, responsive user interface and communicates with backend via REST API
 
 ```
 ┌─────────────────┐         HTTP/REST API        ┌─────────────────┐
 │                 │ ◄──────────────────────────► │                 │
 │  Frontend UI    │                              │  Backend API    │
-│  (Streamlit)    │                              │  (FastAPI)      │
+│  (Vite+React)   │                              │  (FastAPI)      │
 │  Port: 8501     │                              │  Port: 8000     │
 │                 │                              │                 │
 └─────────────────┘                              └────────┬────────┘
@@ -38,7 +38,8 @@ This application follows a **microservices architecture** with two main services
 
 ## Prerequisites
 
-- Python 3.10+
+- Python 3.10+ (for backend)
+- Node.js 20+ (for frontend)
 - Google API Key (Gemini)
 - MongoDB Atlas account or local MongoDB instance
 - Docker & Docker Compose (for containerized deployment)
@@ -65,7 +66,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r backend/requirements.txt
 
 # Install frontend dependencies
-pip install -r frontend/requirements.txt
+cd frontend && npm install
 
 # Or install all at once
 make install
@@ -157,11 +158,15 @@ HR_CVFilter_Agent/
 │   ├── Dockerfile            # Backend Docker config
 │   └── __init__.py
 ├── frontend/                   # Frontend UI Service
-│   ├── app.py                # Streamlit application
-│   ├── api_client.py         # API client for backend
-│   ├── requirements.txt      # Frontend dependencies
-│   ├── Dockerfile           # Frontend Docker config
-│   └── __init__.py
+│   ├── src/                  # React source code
+│   │   ├── components/       # React components
+│   │   ├── services/         # API client
+│   │   └── utils/            # Utility functions
+│   ├── public/               # Static assets
+│   ├── package.json          # Node dependencies
+│   ├── vite.config.ts        # Vite configuration
+│   ├── nginx.conf            # Nginx configuration for production
+│   └── Dockerfile            # Frontend Docker config
 ├── src/                       # Shared source code
 │   ├── agent/
 │   │   └── HR_CVFilter_agent.py   # Main agent logic
@@ -192,10 +197,12 @@ HR_CVFilter_Agent/
 - **MongoDB Service**: CRUD operations for custom rules
 - **Port**: 8000
 
-### Frontend UI Service (Streamlit)
-- **User Interface**: Interactive web UI for CV upload and evaluation
-- **API Client**: Communicates with backend via HTTP
-- **CV Extraction**: Extracts text from PDF, DOCX, TXT, MD files
+### Frontend UI Service (Vite + React)
+- **Modern UI Framework**: Built with React and TypeScript for better performance
+- **Responsive Design**: Clean, modern interface with better UX
+- **API Client**: Communicates with backend via HTTP using Axios
+- **CV Extraction**: Client-side text extraction from PDF, DOCX, TXT, MD files
+- **Production Ready**: Nginx-based production deployment
 - **Port**: 8501
 
 ### Shared Components

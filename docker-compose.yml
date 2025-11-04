@@ -27,7 +27,7 @@ services:
     networks:
       - hr-cv-network
 
-  # Frontend UI Service
+  # Frontend UI Service - Vite + React
   frontend:
     build:
       context: .
@@ -35,17 +35,11 @@ services:
     container_name: hr-cv-frontend
     ports:
       - "8501:8501"
-    environment:
-      - BACKEND_API_URL=http://backend:8000
-    volumes:
-      # Mount source code for development
-      - ./src:/app/src
-      - ./frontend:/app/frontend
     restart: unless-stopped
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8501/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8501/health"]
       interval: 30s
       timeout: 10s
       retries: 3

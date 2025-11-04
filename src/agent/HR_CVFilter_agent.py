@@ -2,6 +2,7 @@ from src.utils.logger import Logger
 logger = Logger(__name__)
 
 import sys
+import os
 sys.path.append('../')
 from src.llms.geminiLLM import LLMGemini
 from src.prompt.context_builder import ContextBuilder
@@ -36,8 +37,12 @@ class HRCVFilterAgent:
         """
         try:
             # Build prompt template with full context
+            # Use absolute path to avoid file not found errors
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            prompt_path = os.path.join(base_dir, "prompt", "system_prompt.md")
+
             prompt = self.context_builder.build_context_v1(
-                md_file_path="src/prompt/system_prompt.md",
+                md_file_path=prompt_path,
                 custom_rules=custom_rules,
                 job_description=job_description,
                 has_cv_data=has_cv_data
@@ -167,7 +172,9 @@ Please evaluate this CV against the job description."""
             if self.chat_history:
                 context = "Previous CV Evaluations:\n\n"
                 for idx, item in enumerate(self.chat_history, 1):
-                    context += f"CV {idx}: {item['cv_filename']}\n{item['evaluation'][:200]}...\n\n"
+                    cv_name = item.get('cv_filename', f'CV {idx}')
+                    evaluation = item.get('evaluation', '')
+                    context += f"CV {idx}: {cv_name}\n{evaluation[:200]}...\n\n"
                 input_text = f"{context}\nUser Question: {message}"
 
             # Invoke agent executor
