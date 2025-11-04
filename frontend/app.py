@@ -293,10 +293,8 @@ if prompt := st.chat_input("Ask questions about the evaluated CVs..."):
                 response = result.get("response", "")
                 st.markdown(response)
                 st.session_state.chat_messages.append({"role": "assistant", "content": response})
-                logger.info(f"Chat response: {response}")
             else:
                 error_msg = f"Error: {result.get('error', 'Unknown error')}"
                 st.error(error_msg)
                 st.session_state.chat_messages.append({"role": "assistant", "content": error_msg})
-                logger.error(f"Chat error: {error_msg}")
 
