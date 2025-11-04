@@ -19,6 +19,7 @@ class RuleService:
         self.db_name = os.getenv("MONGO_DB", "hr_cv_filter_agent")
         self.collection_name = os.getenv("MONGO_COLLECTION", "rules")
         
+        logger.info(f"MONGO_URI: {self.mongo_uri}")
         if not self.mongo_uri:
             error_msg = "MONGO_URI not found in environment variables"
             logger.error(f"❌ {error_msg}")
