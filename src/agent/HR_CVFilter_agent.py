@@ -177,7 +177,7 @@ Please evaluate this CV against the job description."""
             })
             response_content = result.get("output", "")
 
-            logger.info(f"✅ Chat response generated")
+            logger.info(f"✅ Chat response generated \n {response_content}")
             return response_content
 
         except Exception as e:
