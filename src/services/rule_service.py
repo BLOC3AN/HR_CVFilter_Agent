@@ -25,23 +25,34 @@ class RuleService:
             raise ValueError(error_msg)
         
         try:
-            # Create SSL context for MongoDB connection (Python 3.9 compatibility)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
+            # Try multiple connection strategies for better compatibility
+            connection_params = {
+                'serverSelectionTimeoutMS': 10000,
+                'connectTimeoutMS': 10000,
+                'socketTimeoutMS': 10000,
+            }
 
-            # MongoDB connection with SSL/TLS settings
-            self.client = MongoClient(
-                self.mongo_uri,
-                serverSelectionTimeoutMS=10000,
-                connectTimeoutMS=10000,
-                socketTimeoutMS=10000,
-                ssl_cert_reqs=ssl.CERT_NONE,
-                tlsAllowInvalidCertificates=True
-            )
+            # Strategy 1: Try with default settings (URI already has SSL params)
+            try:
+                logger.info("Attempting MongoDB connection...")
+                self.client = MongoClient(self.mongo_uri, **connection_params)
+                self.client.admin.command('ping')
+                logger.info("✅ MongoDB connection successful")
+            except Exception as e1:
+                logger.warning(f"First connection attempt failed: {str(e1)[:100]}")
 
-            # Test connection
-            self.client.admin.command('ping')
+                # Strategy 2: Try with explicit TLS settings
+                try:
+                    logger.info("Retrying with explicit TLS settings...")
+                    connection_params['tls'] = True
+                    connection_params['tlsAllowInvalidCertificates'] = True
+                    self.client = MongoClient(self.mongo_uri, **connection_params)
+                    self.client.admin.command('ping')
+                    logger.info("✅ MongoDB connection successful with TLS")
+                except Exception as e2:
+                    logger.error(f"Second connection attempt failed: {str(e2)[:100]}")
+                    raise ConnectionFailure(f"All MongoDB connection attempts failed. Last error: {str(e2)}")
+
             self.db = self.client[self.db_name]
             self.collection = self.db[self.collection_name]
 

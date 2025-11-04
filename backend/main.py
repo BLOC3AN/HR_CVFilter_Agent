@@ -79,7 +79,8 @@ async def startup_event():
         rule_service = RuleService()
         logger.info("✅ RuleService initialized")
     except Exception as e:
-        logger.error(f"Failed to initialize RuleService: {str(e)}")
+        logger.error(f"⚠️ Failed to initialize RuleService: {str(e)}")
+        logger.error("⚠️ MongoDB features will be unavailable. API will continue without rule management.")
         rule_service = None
 
 # Health check
