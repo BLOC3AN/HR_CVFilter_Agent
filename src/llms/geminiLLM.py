@@ -26,7 +26,7 @@ class LLMGemini:
             top_k=20,
             max_tokens=None,
             max_output_tokens=250,
-            verbose=True,
+            verbose=False,
             disable_streaming=False,
             convert_system_message_to_human=True
         )
