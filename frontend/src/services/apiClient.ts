@@ -55,7 +55,8 @@ class APIClient {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    this.baseURL = baseURL || import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000';
+    // Use relative URL (empty string) for production, falls back to localhost for development
+    this.baseURL = baseURL || import.meta.env.VITE_BACKEND_API_URL || '';
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 60000,

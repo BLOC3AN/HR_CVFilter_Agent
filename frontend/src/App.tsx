@@ -42,7 +42,7 @@ function App() {
       <div className="error-container">
         <h2>⚠️ Backend API is not available</h2>
         <p>{backendError}</p>
-        <p>Please make sure the backend service is running at: {import.meta.env.VITE_BACKEND_API_URL || 'http://localhost:8000'}</p>
+        <p>Please make sure the backend service is running</p>
         <button onClick={checkBackendHealth} className="btn-retry">
           Retry Connection
         </button>
