@@ -37,9 +37,10 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
     socketInstance.on('connect', () => {
       console.log('🔌 Socket connected:', socketInstance.id);
       setConnected(true);
-      
+
       // Register session if available
       if (sessionId) {
+        console.log('📝 Registering session:', sessionId);
         socketInstance.emit('register_session', { session_id: sessionId });
       }
     });
@@ -95,7 +96,15 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
     return () => {
       socketInstance.disconnect();
     };
-  }, [sessionId]);
+  }, []);
+
+  // Register session when sessionId changes
+  useEffect(() => {
+    if (socket && connected && sessionId) {
+      console.log('📝 Registering session (on sessionId change):', sessionId);
+      socket.emit('register_session', { session_id: sessionId });
+    }
+  }, [socket, connected, sessionId]);
 
   return (
     <SocketContext.Provider

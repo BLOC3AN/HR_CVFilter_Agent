@@ -52,11 +52,15 @@ class SocketManager:
         @self.sio.event
         async def register_session(sid, data):
             """Register session ID with socket ID"""
+            logger.info(f"📥 Received register_session event from {sid} with data: {data}")
             session_id = data.get('session_id')
             if session_id:
                 self.session_sockets[session_id] = sid
-                logger.info(f"📝 Registered session {session_id} with socket {sid}")
+                logger.info(f"✅ Registered session {session_id} with socket {sid}")
+                logger.info(f"📊 Current session mappings: {len(self.session_sockets)} sessions")
                 await self.sio.emit('session_registered', {'session_id': session_id}, room=sid)
+            else:
+                logger.warning(f"⚠️ No session_id in register_session data: {data}")
     
     async def emit_to_session(self, session_id: str, event: str, data: Dict[str, Any]):
         """Emit event to specific session"""
