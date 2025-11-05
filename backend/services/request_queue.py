@@ -158,15 +158,15 @@ class RequestQueue:
     ) -> str:
         """
         Add request to queue
-        
+
         Returns:
             request_id: Unique ID for tracking the request
-        
+
         Raises:
             asyncio.QueueFull: If queue is full
         """
         request_id = str(uuid.uuid4())
-        
+
         request = QueuedRequest(
             request_id=request_id,
             session_id=session_id,
@@ -175,10 +175,14 @@ class RequestQueue:
             args=args,
             kwargs=kwargs
         )
-        
+
+        # Add to active requests immediately so wait_for_request can find it
+        async with self.lock:
+            self.active_requests[request_id] = request
+
         # Add to queue (will raise QueueFull if full)
         await self.queue.put(request)
-        
+
         return request_id
     
     async def get_request_status(self, request_id: str) -> Optional[QueuedRequest]:
