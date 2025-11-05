@@ -3,8 +3,12 @@ from dotenv import load_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI #type:ignore
 from src.utils.logger import Logger
 
-# Load environment variables
-load_dotenv()
+# Load environment variables from project root
+# Find the project root by going up from this file's directory
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
+env_path = os.path.join(project_root, '.env')
+load_dotenv(dotenv_path=env_path)
 
 logger = Logger(__name__)
 

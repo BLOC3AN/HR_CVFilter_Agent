@@ -8,7 +8,12 @@ from dotenv import load_dotenv
 from src.models.rule_model import RuleModel
 from src.utils.logger import Logger
 
-load_dotenv()
+# Load environment variables from project root
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.dirname(os.path.dirname(current_dir))
+env_path = os.path.join(project_root, '.env')
+load_dotenv(dotenv_path=env_path)
+
 logger = Logger(__name__)
 
 class RuleService:
