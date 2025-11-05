@@ -77,6 +77,13 @@ export default function CVUploadWithChat({
           llm_model: llmModel,
         });
 
+        // Update session_id if backend returned a new one
+        if (result.session_id && result.session_id !== sessionId) {
+          console.log('📝 Backend returned new session_id, updating:', result.session_id);
+          localStorage.setItem('hr_cv_session_id', result.session_id);
+          // Note: SessionContext will pick this up on next render
+        }
+
         if (result.success && result.evaluation) {
           evaluations.push({
             filename: file.name,
@@ -130,6 +137,12 @@ export default function CVUploadWithChat({
         chat_history: chatMessages,
         llm_model: llmModel,
       });
+
+      // Update session_id if backend returned a new one
+      if (response.session_id && response.session_id !== sessionId) {
+        console.log('📝 Backend returned new session_id, updating:', response.session_id);
+        localStorage.setItem('hr_cv_session_id', response.session_id);
+      }
 
       if (response.success && response.response) {
         setChatMessages([...newMessages, { role: 'assistant', content: response.response }]);

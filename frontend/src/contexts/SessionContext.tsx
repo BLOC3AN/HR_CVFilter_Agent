@@ -24,6 +24,28 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Watch for localStorage changes (from other tabs or backend updates)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      const stored = localStorage.getItem('hr_cv_session_id');
+      if (stored && stored !== sessionId) {
+        console.log('📝 Session ID changed in localStorage, updating:', stored);
+        setSessionId(stored);
+      }
+    };
+
+    // Check localStorage periodically (in case same-tab updates)
+    const interval = setInterval(handleStorageChange, 1000);
+
+    // Also listen to storage events (cross-tab)
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, [sessionId]);
+
   const createSession = async () => {
     try {
       const response = await apiClient.createSession();
