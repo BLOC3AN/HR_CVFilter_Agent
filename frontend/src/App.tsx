@@ -4,9 +4,11 @@ import Sidebar from './components/Sidebar';
 import CVUploadWithChat from './components/CVUploadWithChat';
 import EvaluationResults from './components/EvaluationResults';
 import { apiClient } from './services/apiClient';
-import { SessionProvider } from './contexts/SessionContext';
+import { SessionProvider, useSession } from './contexts/SessionContext';
+import { SocketProvider } from './contexts/SocketContext';
 
-function App() {
+function AppContent() {
+  const { sessionId } = useSession();
   const [jobDescription, setJobDescription] = useState('');
   const [customRules, setCustomRules] = useState('');
   const [llmModel, setLlmModel] = useState('gemini-2.0-flash');
@@ -52,7 +54,7 @@ function App() {
   }
 
   return (
-    <SessionProvider>
+    <SocketProvider sessionId={sessionId}>
       <div className="app">
         <header className="app-header">
           <h1>📄 HR CV Filter Agent</h1>
@@ -90,6 +92,14 @@ function App() {
           </main>
         </div>
       </div>
+    </SocketProvider>
+  );
+}
+
+function App() {
+  return (
+    <SessionProvider>
+      <AppContent />
     </SessionProvider>
   );
 }

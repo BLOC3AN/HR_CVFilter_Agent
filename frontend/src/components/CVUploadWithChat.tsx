@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Upload, Send } from 'lucide-react';
+import { Upload, Send, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { apiClient } from '../services/apiClient';
 import { CVExtractor } from '../utils/cvExtractor';
 import { useSession } from '../contexts/SessionContext';
+import { useSocket } from '../contexts/SocketContext';
 
 interface CVUploadWithChatProps {
   jobDescription: string;
@@ -25,11 +28,12 @@ export default function CVUploadWithChat({
   cvEvaluations,
 }: CVUploadWithChatProps) {
   const { sessionId } = useSession();
+  const { queuePosition, queueTotal, processingStatus, processingProgress } = useSocket();
   const [files, setFiles] = useState<FileList | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [currentFile, setCurrentFile] = useState<string>('');
   const [messages, setMessages] = useState<Array<{ type: 'success' | 'error'; text: string }>>([]);
-  
+
   // Chat state
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
@@ -216,7 +220,30 @@ export default function CVUploadWithChat({
       {/* Chat Section */}
       <div className="chat-section-inline">
         <h3>💬 Chat with AI Assistant</h3>
-        
+
+        {/* Progress Indicator */}
+        {(queuePosition !== null || processingStatus) && (
+          <div className="progress-indicator">
+            {queuePosition !== null && (
+              <div className="queue-status">
+                <Loader2 className="spinner" size={16} />
+                <span>Queue position: {queuePosition}/{queueTotal}</span>
+              </div>
+            )}
+            {processingStatus && (
+              <div className="processing-status">
+                <Loader2 className="spinner" size={16} />
+                <span>{processingStatus}</span>
+                {processingProgress !== null && (
+                  <div className="progress-bar">
+                    <div className="progress-fill" style={{ width: `${processingProgress}%` }} />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="chat-messages-compact">
           {chatMessages.length === 0 ? (
             <div className="chat-empty">
@@ -225,7 +252,11 @@ export default function CVUploadWithChat({
           ) : (
             chatMessages.map((msg, index) => (
               <div key={index} className={`chat-message ${msg.role}`}>
-                <div className="message-content" dangerouslySetInnerHTML={{ __html: msg.content }} />
+                <div className="message-content markdown-content">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {msg.content}
+                  </ReactMarkdown>
+                </div>
               </div>
             ))
           )}
