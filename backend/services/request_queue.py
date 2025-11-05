@@ -4,11 +4,14 @@ Prevents backend crashes from concurrent heavy LLM requests
 """
 
 import asyncio
-from typing import Callable, Any, Optional
+from typing import Callable, Any, Optional, TYPE_CHECKING
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import Enum
 import uuid
+
+if TYPE_CHECKING:
+    from backend.services.socket_manager import SocketManager
 
 
 class RequestStatus(Enum):
@@ -47,13 +50,14 @@ class RequestQueue:
     Prevents backend overload and crashes
     """
     
-    def __init__(self, max_concurrent: int = 1, max_queue_size: int = 100):
+    def __init__(self, max_concurrent: int = 1, max_queue_size: int = 100, socket_manager: Optional['SocketManager'] = None):
         """
         Initialize request queue
-        
+
         Args:
             max_concurrent: Maximum number of concurrent requests (default: 1 for sequential)
             max_queue_size: Maximum queue size before rejecting new requests
+            socket_manager: Socket.IO manager for real-time updates
         """
         self.queue: asyncio.Queue = asyncio.Queue(maxsize=max_queue_size)
         self.max_concurrent = max_concurrent
@@ -62,6 +66,7 @@ class RequestQueue:
         self.workers: list[asyncio.Task] = []
         self.is_running = False
         self.lock = asyncio.Lock()
+        self.socket_manager = socket_manager
     
     async def start(self):
         """Start queue workers"""
@@ -118,35 +123,57 @@ class RequestQueue:
                 request.status = RequestStatus.PROCESSING
                 request.started_at = datetime.now()
                 self.active_requests[request.request_id] = request
-            
+
+            # Emit processing start event
+            if self.socket_manager:
+                await self.socket_manager.emit_processing_start(
+                    request.session_id,
+                    request.request_type
+                )
+
             # Execute handler
             if asyncio.iscoroutinefunction(request.handler):
                 result = await request.handler(*request.args, **request.kwargs)
             else:
                 result = request.handler(*request.args, **request.kwargs)
-            
+
             # Update with result
             async with self.lock:
                 request.status = RequestStatus.COMPLETED
                 request.completed_at = datetime.now()
                 request.result = result
-                
+
                 # Move to completed
                 if request.request_id in self.active_requests:
                     del self.active_requests[request.request_id]
                 self.completed_requests[request.request_id] = request
-                
+
+            # Emit completion event
+            if self.socket_manager:
+                await self.socket_manager.emit_processing_complete(
+                    request.session_id,
+                    request.request_type,
+                    result
+                )
+
         except Exception as e:
             # Update with error
             async with self.lock:
                 request.status = RequestStatus.FAILED
                 request.completed_at = datetime.now()
                 request.error = str(e)
-                
+
                 # Move to completed
                 if request.request_id in self.active_requests:
                     del self.active_requests[request.request_id]
                 self.completed_requests[request.request_id] = request
+
+            # Emit error event
+            if self.socket_manager:
+                await self.socket_manager.emit_processing_error(
+                    request.session_id,
+                    str(e)
+                )
     
     async def enqueue(
         self,

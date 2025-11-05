@@ -20,6 +20,7 @@ from src.utils.cv_extractor import CVExtractor
 from src.utils.logger import Logger
 from backend.services.session_service import SessionService
 from backend.services.request_queue import RequestQueue
+from backend.services.socket_manager import SocketManager
 
 logger = Logger(__name__)
 
@@ -29,6 +30,9 @@ app = FastAPI(
     description="Backend API for AI-powered CV filtering and evaluation",
     version="1.0.0"
 )
+
+# Initialize Socket.IO manager
+socket_manager = SocketManager()
 
 # CORS middleware
 app.add_middleware(
@@ -44,6 +48,7 @@ agent_instance = None
 rule_service = None
 session_service = None
 request_queue = None
+socket_io = None
 
 # Pydantic models
 class EvaluateCVRequest(BaseModel):
@@ -100,9 +105,9 @@ async def startup_event():
         logger.error(f"⚠️ Failed to initialize SessionService: {str(e)}")
         session_service = None
 
-    # Initialize RequestQueue
+    # Initialize RequestQueue with socket manager
     try:
-        request_queue = RequestQueue(max_concurrent=1, max_queue_size=100)
+        request_queue = RequestQueue(max_concurrent=1, max_queue_size=100, socket_manager=socket_manager)
         await request_queue.start()
         logger.info("✅ RequestQueue initialized and started")
     except Exception as e:
@@ -424,6 +429,10 @@ async def delete_rule(name: str):
     except Exception as e:
         logger.error(f"Error deleting rule: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+# Mount Socket.IO app
+socket_app = socket_manager.get_asgi_app()
+app.mount("/socket.io", socket_app)
 
 if __name__ == "__main__":
     import uvicorn
