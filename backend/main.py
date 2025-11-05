@@ -134,6 +134,55 @@ async def health_check():
         "active_sessions": session_service.get_session_count() if session_service else 0
     }
 
+# Extract text from uploaded CV file
+@app.post("/api/extract-cv")
+async def extract_cv(file: UploadFile = File(...)):
+    """
+    Extract text content from uploaded CV file (PDF, DOCX, DOC, TXT, MD)
+    """
+    try:
+        # Get file extension
+        filename = file.filename or ""
+        file_ext = filename.split('.')[-1].lower()
+
+        # Validate file type
+        supported_types = ['pdf', 'docx', 'doc', 'txt', 'md']
+        if file_ext not in supported_types:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported file type: {file_ext}. Supported types: {', '.join(supported_types)}"
+            )
+
+        # Read file content
+        file_content = await file.read()
+
+        # Create a file-like object for CVExtractor
+        from io import BytesIO
+        file_obj = BytesIO(file_content)
+        file_obj.name = filename
+
+        # Extract text
+        extracted_text = CVExtractor.extract(file_obj, file_ext)
+
+        if not extracted_text:
+            raise HTTPException(
+                status_code=400,
+                detail="Could not extract text from file. File may be empty or corrupted."
+            )
+
+        return {
+            "success": True,
+            "filename": filename,
+            "text": extracted_text,
+            "length": len(extracted_text)
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error extracting CV: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error extracting CV: {str(e)}")
+
 # Get or create session
 @app.post("/api/session")
 async def create_session():

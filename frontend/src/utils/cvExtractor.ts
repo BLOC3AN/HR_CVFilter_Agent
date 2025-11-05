@@ -1,58 +1,38 @@
+const BACKEND_URL = import.meta.env.VITE_BACKEND_API_URL || '';
+
 export class CVExtractor {
+  /**
+   * Extract text from CV file by uploading to backend
+   * Backend uses proper libraries (PyPDF2, python-docx) for accurate extraction
+   */
   static async extractText(file: File): Promise<string> {
-    const fileType = file.name.split('.').pop()?.toLowerCase();
+    try {
+      // Create FormData to upload file
+      const formData = new FormData();
+      formData.append('file', file);
 
-    switch (fileType) {
-      case 'txt':
-      case 'md':
-        return await this.extractTextFromPlainText(file);
-      case 'pdf':
-        return await this.extractTextFromPDF(file);
-      case 'docx':
-        return await this.extractTextFromDOCX(file);
-      default:
-        throw new Error(`Unsupported file type: ${fileType}`);
-    }
-  }
+      // Call backend API to extract text
+      const response = await fetch(`${BACKEND_URL}/api/extract-cv`, {
+        method: 'POST',
+        body: formData,
+      });
 
-  private static async extractTextFromPlainText(file: File): Promise<string> {
-    return await file.text();
-  }
-
-  private static async extractTextFromPDF(file: File): Promise<string> {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const text = new TextDecoder('utf-8').decode(uint8Array);
-    
-    const lines: string[] = [];
-    const textLines = text.split('\n');
-    
-    for (const line of textLines) {
-      const cleanLine = line.trim();
-      if (cleanLine && !cleanLine.startsWith('%') && !cleanLine.startsWith('<<')) {
-        lines.push(cleanLine);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || `Failed to extract text from ${file.name}`);
       }
-    }
-    
-    return lines.join('\n');
-  }
 
-  private static async extractTextFromDOCX(file: File): Promise<string> {
-    const arrayBuffer = await file.arrayBuffer();
-    const uint8Array = new Uint8Array(arrayBuffer);
-    const text = new TextDecoder('utf-8').decode(uint8Array);
-    
-    const lines: string[] = [];
-    const textLines = text.split('\n');
-    
-    for (const line of textLines) {
-      const cleanLine = line.trim();
-      if (cleanLine && cleanLine.length > 0) {
-        lines.push(cleanLine);
+      const result = await response.json();
+
+      if (!result.success || !result.text) {
+        throw new Error('Failed to extract text from file');
       }
+
+      return result.text;
+    } catch (error) {
+      console.error('Error extracting CV:', error);
+      throw error;
     }
-    
-    return lines.join('\n');
   }
 }
 

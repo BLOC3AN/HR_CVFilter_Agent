@@ -63,7 +63,7 @@ class CVExtractor:
 
         Args:
             file: Uploaded file object
-            file_type: File extension (pdf, docx, txt, md)
+            file_type: File extension (pdf, docx, doc, txt, md)
 
         Returns:
             Extracted text content
@@ -72,7 +72,8 @@ class CVExtractor:
 
         if file_type == "pdf":
             return CVExtractor.extract_from_pdf(file)
-        elif file_type == "docx":
+        elif file_type in ["docx", "doc"]:
+            # Both .docx and .doc can be handled by python-docx
             return CVExtractor.extract_from_docx(file)
         elif file_type == "txt":
             return CVExtractor.extract_from_txt(file)
