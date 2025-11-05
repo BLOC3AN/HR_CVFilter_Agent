@@ -38,6 +38,10 @@ export default function CVUpload({
 
     setIsEvaluating(true);
     setMessages([]);
+
+    // Clear previous evaluations - only show new results
+    onEvaluationsChange([]);
+
     const evaluations: Array<{ filename: string; evaluation: string }> = [];
 
     for (let i = 0; i < files.length; i++) {
@@ -46,7 +50,7 @@ export default function CVUpload({
 
       try {
         const cvContent = await CVExtractor.extractText(file);
-        
+
         const result = await apiClient.evaluateCV({
           cv_content: cvContent,
           job_description: jobDescription,
@@ -80,6 +84,7 @@ export default function CVUpload({
       }
     }
 
+    // Set only the new evaluations (no history accumulation)
     onEvaluationsChange(evaluations);
     setIsEvaluating(false);
     setCurrentFile('');
