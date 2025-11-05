@@ -29,7 +29,8 @@ class SocketManager:
     
     def _setup_handlers(self):
         """Setup Socket.IO event handlers"""
-        
+        logger.info("🔧 Setting up Socket.IO event handlers...")
+
         @self.sio.event
         async def connect(sid, environ):
             """Handle client connection"""
