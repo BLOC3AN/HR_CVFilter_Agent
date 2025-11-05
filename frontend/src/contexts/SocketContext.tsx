@@ -100,9 +100,12 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
 
   // Register session when sessionId changes
   useEffect(() => {
+    console.log('🔍 Session registration effect triggered:', { socket: !!socket, connected, sessionId });
     if (socket && connected && sessionId) {
       console.log('📝 Registering session (on sessionId change):', sessionId);
       socket.emit('register_session', { session_id: sessionId });
+    } else {
+      console.log('⏸️ Waiting for socket/connection/sessionId:', { socket: !!socket, connected, sessionId });
     }
   }, [socket, connected, sessionId]);
 
