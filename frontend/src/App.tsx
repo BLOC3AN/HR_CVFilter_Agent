@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import './App.css';
 import Sidebar from './components/Sidebar';
-import CVUpload from './components/CVUpload';
+import CVUploadWithChat from './components/CVUploadWithChat';
 import EvaluationResults from './components/EvaluationResults';
-import Chat from './components/Chat';
 import { apiClient } from './services/apiClient';
+import { SessionProvider } from './contexts/SessionContext';
 
 function App() {
   const [jobDescription, setJobDescription] = useState('');
@@ -13,6 +13,7 @@ function App() {
   const [cvEvaluations, setCvEvaluations] = useState<Array<{ filename: string; evaluation: string }>>([]);
   const [backendStatus, setBackendStatus] = useState<'checking' | 'healthy' | 'unhealthy'>('checking');
   const [backendError, setBackendError] = useState('');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     checkBackendHealth();
@@ -51,49 +52,45 @@ function App() {
   }
 
   return (
-    <div className="app">
-      <header className="app-header">
-        <h1>📄 HR CV Filter Agent</h1>
-      </header>
+    <SessionProvider>
+      <div className="app">
+        <header className="app-header">
+          <h1>📄 HR CV Filter Agent</h1>
+        </header>
 
-      <div className="app-container">
-        <aside className="app-sidebar">
-          <Sidebar
-            jobDescription={jobDescription}
-            onJobDescriptionChange={setJobDescription}
-            customRules={customRules}
-            onCustomRulesChange={setCustomRules}
-            llmModel={llmModel}
-            onLlmModelChange={setLlmModel}
-          />
-        </aside>
-
-        <main className="app-main">
-          <div className="main-grid">
-            <div className="grid-item">
-              <CVUpload
-                jobDescription={jobDescription}
-                customRules={customRules}
-                llmModel={llmModel}
-                onEvaluationsChange={setCvEvaluations}
-              />
-            </div>
-            <div className="grid-item">
-              <EvaluationResults evaluations={cvEvaluations} />
-            </div>
-          </div>
-
-          <div className="chat-section">
-            <Chat
+        <div className="app-container">
+          <aside className={`app-sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+            <Sidebar
               jobDescription={jobDescription}
+              onJobDescriptionChange={setJobDescription}
               customRules={customRules}
-              cvEvaluations={cvEvaluations}
+              onCustomRulesChange={setCustomRules}
               llmModel={llmModel}
+              onLlmModelChange={setLlmModel}
+              collapsed={sidebarCollapsed}
+              onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
             />
-          </div>
-        </main>
+          </aside>
+
+          <main className={`app-main ${sidebarCollapsed ? 'expanded' : ''}`}>
+            <div className="main-content">
+              <div className="left-panel">
+                <CVUploadWithChat
+                  jobDescription={jobDescription}
+                  customRules={customRules}
+                  llmModel={llmModel}
+                  onEvaluationsChange={setCvEvaluations}
+                  cvEvaluations={cvEvaluations}
+                />
+              </div>
+              <div className="right-panel">
+                <EvaluationResults evaluations={cvEvaluations} />
+              </div>
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SessionProvider>
   );
 }
 

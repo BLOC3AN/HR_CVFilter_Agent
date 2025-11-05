@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { apiClient } from '../services/apiClient';
 
 interface SidebarProps {
@@ -8,6 +9,8 @@ interface SidebarProps {
   onCustomRulesChange: (value: string) => void;
   llmModel: string;
   onLlmModelChange: (value: string) => void;
+  collapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 export default function Sidebar({
@@ -16,6 +19,8 @@ export default function Sidebar({
   onCustomRulesChange,
   llmModel,
   onLlmModelChange,
+  collapsed,
+  onToggleCollapse,
 }: SidebarProps) {
   const [ruleNames, setRuleNames] = useState<string[]>([]);
   const [selectedRuleName, setSelectedRuleName] = useState<string | null>(null);
@@ -122,7 +127,13 @@ export default function Sidebar({
 
   return (
     <div className="sidebar">
-      <div className="sidebar-section">
+      <button className="sidebar-toggle" onClick={onToggleCollapse} title={collapsed ? "Expand" : "Collapse"}>
+        {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+      </button>
+
+      {!collapsed && (
+        <>
+          <div className="sidebar-section">
         <h3>Configuration</h3>
         <div className="form-group">
           <label>Select LLM Model</label>
@@ -214,6 +225,8 @@ export default function Sidebar({
           </div>
         )}
       </div>
+        </>
+      )}
     </div>
   );
 }

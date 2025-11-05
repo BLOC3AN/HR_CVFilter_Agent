@@ -2,6 +2,7 @@ import axios from 'axios';
 import type { AxiosInstance } from 'axios';
 
 export interface EvaluateCVRequest {
+  session_id?: string;
   cv_content: string;
   job_description: string;
   custom_rules?: string;
@@ -10,11 +11,14 @@ export interface EvaluateCVRequest {
 
 export interface EvaluateCVResponse {
   success: boolean;
+  session_id?: string;
   evaluation?: string;
+  queue_position?: number;
   error?: string;
 }
 
 export interface ChatRequest {
+  session_id?: string;
   message: string;
   job_description: string;
   custom_rules?: string;
@@ -25,7 +29,9 @@ export interface ChatRequest {
 
 export interface ChatResponse {
   success: boolean;
+  session_id?: string;
   response?: string;
+  queue_position?: number;
   error?: string;
 }
 
@@ -83,6 +89,7 @@ class APIClient {
   async evaluateCV(request: EvaluateCVRequest): Promise<EvaluateCVResponse> {
     try {
       const response = await this.client.post<EvaluateCVResponse>('/api/evaluate-cv', {
+        session_id: request.session_id,
         cv_content: request.cv_content,
         job_description: request.job_description,
         custom_rules: request.custom_rules || '',
@@ -100,6 +107,7 @@ class APIClient {
   async chat(request: ChatRequest): Promise<ChatResponse> {
     try {
       const response = await this.client.post<ChatResponse>('/api/chat', {
+        session_id: request.session_id,
         message: request.message,
         job_description: request.job_description,
         custom_rules: request.custom_rules || '',
@@ -107,6 +115,18 @@ class APIClient {
         chat_history: request.chat_history || [],
         llm_model: request.llm_model || 'gemini-2.0-flash',
       });
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  async createSession(): Promise<{ success: boolean; session_id?: string; error?: string }> {
+    try {
+      const response = await this.client.post('/api/session');
       return response.data;
     } catch (error) {
       return {
