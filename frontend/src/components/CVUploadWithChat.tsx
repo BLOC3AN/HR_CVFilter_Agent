@@ -52,7 +52,7 @@ export default function CVUploadWithChat({
         evaluation: data.evaluation
       };
 
-      onEvaluationsChange((prev: any[]) => [...prev, newEvaluation]);
+      onEvaluationsChange([...cvEvaluations, newEvaluation]);
       setMessages((prev) => [...prev, { type: 'success', text: `✅ ${currentFile} evaluated successfully` }]);
       setIsEvaluating(false);
       setCurrentFile('');
