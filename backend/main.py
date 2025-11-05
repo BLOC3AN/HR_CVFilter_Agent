@@ -530,12 +530,16 @@ async def handle_chat_socketio(sid: str, data: dict):
         # Define handler function
         def chat_handler():
             agent = HRCVFilterAgent(llm_model_name=llm_model)
+
+            # Add CV evaluations to agent's chat history if provided
+            if cv_evaluations:
+                agent.chat_history = cv_evaluations
+
+            # Chat with agent
             return agent.chat(
                 message=message,
                 job_description=job_description,
-                custom_rules=custom_rules,
-                cv_evaluations=cv_evaluations,
-                chat_history=chat_history
+                custom_rules=custom_rules
             )
 
         # Enqueue request
