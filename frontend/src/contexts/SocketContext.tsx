@@ -70,7 +70,7 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
       setProcessingStatus(data.message);
     });
 
-    socketInstance.on('processing_complete', (data) => {
+    socketInstance.on('processing_complete', () => {
       setProcessingStatus(null);
       setProcessingProgress(null);
     });
