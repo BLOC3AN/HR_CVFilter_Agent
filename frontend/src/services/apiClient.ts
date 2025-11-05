@@ -1,5 +1,6 @@
 import axios from 'axios';
 import type { AxiosInstance } from 'axios';
+import { API_BASE_URL } from '../config';
 
 export interface EvaluateCVRequest {
   cv_content: string;
@@ -55,8 +56,9 @@ class APIClient {
   private baseURL: string;
 
   constructor(baseURL?: string) {
-    // Use relative URL (empty string) for production, falls back to localhost for development
-    this.baseURL = baseURL || import.meta.env.VITE_BACKEND_API_URL || '';
+    // Use relative URL for production (nginx will proxy to backend)
+    // For local development, set VITE_BACKEND_API_URL=http://localhost:8000 in .env
+    this.baseURL = baseURL || API_BASE_URL;
     this.client = axios.create({
       baseURL: this.baseURL,
       timeout: 60000,
