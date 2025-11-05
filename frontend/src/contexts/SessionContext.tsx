@@ -29,7 +29,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const handleStorageChange = () => {
       const stored = localStorage.getItem('hr_cv_session_id');
       if (stored && stored !== sessionId) {
-        console.log('📝 Session ID changed in localStorage, updating:', stored);
         setSessionId(stored);
       }
     };

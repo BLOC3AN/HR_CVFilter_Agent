@@ -11,13 +11,12 @@ class SocketManager:
     """Manages Socket.IO connections and events"""
     
     def __init__(self):
-        print("🚀 SocketManager __init__ called")
         # Create Socket.IO server with ASGI support
         self.sio = socketio.AsyncServer(
             async_mode='asgi',
             cors_allowed_origins='*',
-            logger=True,  # Enable Socket.IO logging
-            engineio_logger=True  # Enable Engine.IO logging
+            logger=False,
+            engineio_logger=False
         )
 
         # Track session to socket ID mapping
@@ -26,18 +25,14 @@ class SocketManager:
         # Setup event handlers
         self._setup_handlers()
 
-        print("✅ SocketManager initialized")
         logger.info("✅ SocketManager initialized")
     
     def _setup_handlers(self):
         """Setup Socket.IO event handlers"""
-        print("🔧 Setting up Socket.IO event handlers...")
-        logger.info("🔧 Setting up Socket.IO event handlers...")
 
         @self.sio.event
         async def connect(sid, environ):
             """Handle client connection"""
-            print(f"🔌 Client connected: {sid}")
             logger.info(f"🔌 Client connected: {sid}")
             await self.sio.emit('connected', {'sid': sid}, room=sid)
         
@@ -57,17 +52,12 @@ class SocketManager:
         @self.sio.event
         async def register_session(sid, data):
             """Register session ID with socket ID"""
-            print(f"📥 Received register_session event from {sid} with data: {data}")
-            logger.info(f"📥 Received register_session event from {sid} with data: {data}")
             session_id = data.get('session_id')
             if session_id:
                 self.session_sockets[session_id] = sid
-                print(f"✅ Registered session {session_id} with socket {sid}")
                 logger.info(f"✅ Registered session {session_id} with socket {sid}")
-                logger.info(f"📊 Current session mappings: {len(self.session_sockets)} sessions")
                 await self.sio.emit('session_registered', {'session_id': session_id}, room=sid)
             else:
-                print(f"⚠️ No session_id in register_session data: {data}")
                 logger.warning(f"⚠️ No session_id in register_session data: {data}")
     
     async def emit_to_session(self, session_id: str, event: str, data: Dict[str, Any]):

@@ -1,6 +1,8 @@
 # HR CV Filter Agent
 
-An intelligent HR CV filtering system powered by Google Gemini AI. This application helps HR professionals automate CV screening and evaluation against job descriptions.
+**Version 1.2.0**
+
+An intelligent HR CV filtering system powered by Google Gemini AI. This application helps HR professionals automate CV screening and evaluation against job descriptions with real-time updates and session management.
 
 ## Architecture
 
@@ -28,13 +30,22 @@ This application follows a **microservices architecture** with two main services
 
 ## Features
 
+### Core Features
 - 📄 **Multi-format CV Support**: Upload CVs in PDF, DOCX, TXT, or MD formats
 - 🤖 **AI-Powered Evaluation**: Uses Google Gemini to analyze and evaluate CVs
 - 📋 **Custom Rules Management**: Create, update, delete evaluation rules stored in MongoDB
-- 💬 **Interactive Chat**: Ask questions about evaluated CVs
+- 💬 **Interactive Chat**: Ask questions about evaluated CVs with markdown rendering
 - 🎯 **Job Description Matching**: Automatically matches CVs against job requirements
 - 🔄 **Dynamic Context**: Agent automatically reads all available fields and provides hints
 - 💾 **MongoDB Integration**: Persistent storage for custom evaluation rules
+
+### Version 1.2 Features
+- 🔐 **Session Management**: Persistent user sessions with automatic timeout and cleanup
+- 📊 **Request Queue System**: Sequential request processing to prevent backend overload
+- ⚡ **Real-time Updates**: Socket.IO integration for live progress monitoring
+- 📈 **Queue Position Tracking**: See your position in the processing queue
+- 🎨 **Markdown Rendering**: Rich text formatting in chat responses
+- 🔄 **Auto Session Sync**: Automatic session synchronization between frontend and backend
 
 ## Prerequisites
 
@@ -191,10 +202,13 @@ HR_CVFilter_Agent/
 ## Components
 
 ### Backend API Service (FastAPI)
-- **REST API Endpoints**: `/api/evaluate-cv`, `/api/chat`, `/api/rules/*`
+- **REST API Endpoints**: `/api/evaluate-cv`, `/api/chat`, `/api/rules/*`, `/api/session`
 - **Agent Orchestration**: Manages CV evaluation and chat interactions
 - **LLM Integration**: Communicates with Google Gemini API
 - **MongoDB Service**: CRUD operations for custom rules
+- **Session Management**: UUID-based session tracking with 60-minute timeout
+- **Request Queue**: Async queue system for sequential request processing
+- **Socket.IO Server**: Real-time event broadcasting to clients
 - **Port**: 8000
 
 ### Frontend UI Service (Vite + React)
@@ -202,13 +216,17 @@ HR_CVFilter_Agent/
 - **Responsive Design**: Clean, modern interface with better UX
 - **API Client**: Communicates with backend via HTTP using Axios
 - **CV Extraction**: Client-side text extraction from PDF, DOCX, TXT, MD files
-- **Production Ready**: Nginx-based production deployment
+- **Socket.IO Client**: Real-time updates for queue position and processing status
+- **Markdown Rendering**: Rich text formatting with react-markdown and remark-gfm
+- **Session Persistence**: LocalStorage-based session management with auto-sync
+- **Production Ready**: Nginx-based production deployment with WebSocket proxy
 - **Port**: 8501
 
 ### Shared Components
 - **Context Builder**: Dynamically builds prompts with job description, custom rules, and hints
 - **Rule Model**: Data model for evaluation rules
 - **Logger**: Centralized logging utility
+- **Socket Manager**: Manages Socket.IO connections and session-to-socket mappings
 
 ## Key Features
 
@@ -273,6 +291,42 @@ If port 8501 is already in use, modify `docker-compose.yml`:
 ports:
   - "8502:8501"  # Use different external port
 ```
+
+## Version History
+
+### Version 1.2.0 (2025-11-05)
+**New Features:**
+- ✅ Session Management with UUID-based tracking
+- ✅ Request Queue System for sequential processing
+- ✅ Socket.IO integration for real-time updates
+- ✅ Queue position and processing status monitoring
+- ✅ Markdown rendering in chat responses
+- ✅ Auto session synchronization between frontend and backend
+- ✅ Collapsible sidebar UI improvements
+
+**Technical Improvements:**
+- Added `SessionService` for session lifecycle management
+- Implemented `RequestQueue` with async processing
+- Integrated `SocketManager` for WebSocket communication
+- Added nginx WebSocket proxy configuration
+- Implemented localStorage-based session persistence
+- Added react-markdown and remark-gfm for rich text rendering
+
+**Bug Fixes:**
+- Fixed session ID mismatch between frontend and backend
+- Resolved Socket.IO connection issues with nginx proxy
+- Fixed session registration timing issues
+
+### Version 1.1.0
+- Initial microservices architecture
+- MongoDB integration for custom rules
+- Multi-format CV support
+- Interactive chat functionality
+
+### Version 1.0.0
+- Initial release
+- Basic CV evaluation with Google Gemini
+- Simple UI with Streamlit
 
 ## License
 

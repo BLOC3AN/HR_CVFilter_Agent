@@ -35,39 +35,30 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
 
     // Connection events
     socketInstance.on('connect', () => {
-      console.log('🔌 Socket connected:', socketInstance.id);
       setConnected(true);
 
       // Register session if available
       if (sessionId) {
-        console.log('📝 Registering session:', sessionId);
         socketInstance.emit('register_session', { session_id: sessionId });
       }
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('🔌 Socket disconnected');
       setConnected(false);
     });
 
-    socketInstance.on('connected', (data) => {
-      console.log('✅ Socket connection confirmed:', data);
-    });
-
     socketInstance.on('session_registered', (data) => {
-      console.log('📝 Session registered:', data);
+      console.log('✅ Session registered:', data.session_id);
     });
 
     // Queue events
     socketInstance.on('queue_update', (data) => {
-      console.log('📊 Queue update:', data);
       setQueuePosition(data.position);
       setQueueTotal(data.total);
     });
 
     // Processing events
     socketInstance.on('processing_start', (data) => {
-      console.log('🚀 Processing started:', data);
       setProcessingStatus(data.message);
       setProcessingProgress(0);
       setQueuePosition(null);
@@ -75,19 +66,17 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
     });
 
     socketInstance.on('processing_progress', (data) => {
-      console.log('⏳ Processing progress:', data);
       setProcessingProgress(data.progress);
       setProcessingStatus(data.message);
     });
 
     socketInstance.on('processing_complete', (data) => {
-      console.log('✅ Processing complete:', data);
       setProcessingStatus(null);
       setProcessingProgress(null);
     });
 
     socketInstance.on('processing_error', (data) => {
-      console.error('❌ Processing error:', data);
+      console.error('❌ Processing error:', data.error);
       setProcessingStatus(null);
       setProcessingProgress(null);
     });
@@ -100,12 +89,8 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
 
   // Register session when sessionId changes
   useEffect(() => {
-    console.log('🔍 Session registration effect triggered:', { socket: !!socket, connected, sessionId });
     if (socket && connected && sessionId) {
-      console.log('📝 Registering session (on sessionId change):', sessionId);
       socket.emit('register_session', { session_id: sessionId });
-    } else {
-      console.log('⏸️ Waiting for socket/connection/sessionId:', { socket: !!socket, connected, sessionId });
     }
   }, [socket, connected, sessionId]);
 
