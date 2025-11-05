@@ -9,6 +9,22 @@ interface SocketContextType {
   queueTotal: number | null;
   processingStatus: string | null;
   processingProgress: number | null;
+  evaluateCV: (data: {
+    session_id: string;
+    cv_content: string;
+    job_description?: string;
+    custom_rules?: string;
+    llm_model?: string;
+  }) => void;
+  sendChat: (data: {
+    session_id: string;
+    message: string;
+    job_description?: string;
+    custom_rules?: string;
+    cv_evaluations?: any[];
+    chat_history?: any[];
+    llm_model?: string;
+  }) => void;
 }
 
 const SocketContext = createContext<SocketContextType | undefined>(undefined);
@@ -94,6 +110,37 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
     }
   }, [socket, connected, sessionId]);
 
+  // Emit functions
+  const evaluateCV = (data: {
+    session_id: string;
+    cv_content: string;
+    job_description?: string;
+    custom_rules?: string;
+    llm_model?: string;
+  }) => {
+    if (socket && connected) {
+      socket.emit('evaluate_cv', data);
+    } else {
+      console.error('Socket not connected');
+    }
+  };
+
+  const sendChat = (data: {
+    session_id: string;
+    message: string;
+    job_description?: string;
+    custom_rules?: string;
+    cv_evaluations?: any[];
+    chat_history?: any[];
+    llm_model?: string;
+  }) => {
+    if (socket && connected) {
+      socket.emit('chat', data);
+    } else {
+      console.error('Socket not connected');
+    }
+  };
+
   return (
     <SocketContext.Provider
       value={{
@@ -103,6 +150,8 @@ export function SocketProvider({ children, sessionId }: { children: ReactNode; s
         queueTotal,
         processingStatus,
         processingProgress,
+        evaluateCV,
+        sendChat,
       }}
     >
       {children}

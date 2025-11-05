@@ -1,8 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Upload, Send, Loader2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { apiClient } from '../services/apiClient';
 import { CVExtractor } from '../utils/cvExtractor';
 import { useSession } from '../contexts/SessionContext';
 import { useSocket } from '../contexts/SocketContext';
@@ -28,7 +27,7 @@ export default function CVUploadWithChat({
   cvEvaluations,
 }: CVUploadWithChatProps) {
   const { sessionId } = useSession();
-  const { queuePosition, queueTotal, processingStatus, processingProgress } = useSocket();
+  const { socket, queuePosition, queueTotal, processingStatus, processingProgress, evaluateCV, sendChat } = useSocket();
   const [files, setFiles] = useState<FileList | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
   const [currentFile, setCurrentFile] = useState<string>('');
@@ -38,6 +37,71 @@ export default function CVUploadWithChat({
   const [chatMessages, setChatMessages] = useState<Message[]>([]);
   const [chatInput, setChatInput] = useState('');
   const [isChatLoading, setIsChatLoading] = useState(false);
+
+  // Socket.IO event listeners
+  useEffect(() => {
+    if (!socket) return;
+
+    // CV evaluation events
+    socket.on('evaluate_cv_complete', (data) => {
+      console.log('✅ CV evaluation complete:', data);
+
+      // Add to evaluations
+      const newEvaluation = {
+        filename: currentFile,
+        evaluation: data.evaluation
+      };
+
+      onEvaluationsChange((prev: any[]) => [...prev, newEvaluation]);
+      setMessages((prev) => [...prev, { type: 'success', text: `✅ ${currentFile} evaluated successfully` }]);
+      setIsEvaluating(false);
+      setCurrentFile('');
+
+      // Update session_id if needed
+      if (data.session_id && data.session_id !== sessionId) {
+        localStorage.setItem('hr_cv_session_id', data.session_id);
+      }
+    });
+
+    socket.on('evaluate_cv_error', (data) => {
+      console.error('❌ CV evaluation error:', data.error);
+      setMessages((prev) => [...prev, { type: 'error', text: `❌ Error: ${data.error}` }]);
+      setIsEvaluating(false);
+      setCurrentFile('');
+    });
+
+    // Chat events
+    socket.on('chat_complete', (data) => {
+      console.log('✅ Chat response received:', data);
+
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: data.response },
+      ]);
+      setIsChatLoading(false);
+
+      // Update session_id if needed
+      if (data.session_id && data.session_id !== sessionId) {
+        localStorage.setItem('hr_cv_session_id', data.session_id);
+      }
+    });
+
+    socket.on('chat_error', (data) => {
+      console.error('❌ Chat error:', data.error);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: `Error: ${data.error}` },
+      ]);
+      setIsChatLoading(false);
+    });
+
+    return () => {
+      socket.off('evaluate_cv_complete');
+      socket.off('evaluate_cv_error');
+      socket.off('chat_complete');
+      socket.off('chat_error');
+    };
+  }, [socket, currentFile, sessionId, onEvaluationsChange]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFiles(e.target.files);
@@ -54,13 +118,16 @@ export default function CVUploadWithChat({
       return;
     }
 
+    if (!sessionId) {
+      setMessages([{ type: 'error', text: '⚠️ Session not initialized' }]);
+      return;
+    }
+
     setIsEvaluating(true);
     setMessages([]);
 
     // Clear previous evaluations - only show new results
     onEvaluationsChange([]);
-
-    const evaluations: Array<{ filename: string; evaluation: string }> = [];
 
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
@@ -69,34 +136,16 @@ export default function CVUploadWithChat({
       try {
         const cvContent = await CVExtractor.extractText(file);
 
-        const result = await apiClient.evaluateCV({
-          session_id: sessionId || undefined,
+        // Emit via Socket.IO instead of REST API
+        evaluateCV({
+          session_id: sessionId,
           cv_content: cvContent,
           job_description: jobDescription,
           custom_rules: customRules,
           llm_model: llmModel,
         });
 
-        // Update session_id if backend returned a new one
-        if (result.session_id && result.session_id !== sessionId) {
-          localStorage.setItem('hr_cv_session_id', result.session_id);
-        }
-
-        if (result.success && result.evaluation) {
-          evaluations.push({
-            filename: file.name,
-            evaluation: result.evaluation,
-          });
-          setMessages((prev) => [
-            ...prev,
-            { type: 'success', text: `✅ Evaluated ${file.name}` },
-          ]);
-        } else {
-          setMessages((prev) => [
-            ...prev,
-            { type: 'error', text: `❌ Failed to evaluate ${file.name}: ${result.error}` },
-          ]);
-        }
+        // Note: Response will be handled by socket event listener
       } catch (error) {
         setMessages((prev) => [
           ...prev,
@@ -108,14 +157,19 @@ export default function CVUploadWithChat({
       }
     }
 
-    // Set only the new evaluations (no history accumulation)
-    onEvaluationsChange(evaluations);
-    setIsEvaluating(false);
-    setCurrentFile('');
+    // Note: setIsEvaluating(false) will be called by socket event listener
   };
 
   const handleSendMessage = async () => {
     if (!chatInput.trim() || isChatLoading) return;
+
+    if (!sessionId) {
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Error: Session not initialized' },
+      ]);
+      return;
+    }
 
     const userMessage = chatInput.trim();
     setChatInput('');
@@ -125,41 +179,18 @@ export default function CVUploadWithChat({
     setChatMessages(newMessages);
     setIsChatLoading(true);
 
-    try {
-      const response = await apiClient.chat({
-        session_id: sessionId || undefined,
-        message: userMessage,
-        job_description: jobDescription,
-        custom_rules: customRules,
-        cv_evaluations: cvEvaluations,
-        chat_history: chatMessages,
-        llm_model: llmModel,
-      });
+    // Emit via Socket.IO instead of REST API
+    sendChat({
+      session_id: sessionId,
+      message: userMessage,
+      job_description: jobDescription,
+      custom_rules: customRules,
+      cv_evaluations: cvEvaluations,
+      chat_history: chatMessages,
+      llm_model: llmModel,
+    });
 
-      // Update session_id if backend returned a new one
-      if (response.session_id && response.session_id !== sessionId) {
-        localStorage.setItem('hr_cv_session_id', response.session_id);
-      }
-
-      if (response.success && response.response) {
-        setChatMessages([...newMessages, { role: 'assistant', content: response.response }]);
-      } else {
-        setChatMessages([
-          ...newMessages,
-          { role: 'assistant', content: `Error: ${response.error || 'Unknown error'}` },
-        ]);
-      }
-    } catch (error) {
-      setChatMessages([
-        ...newMessages,
-        {
-          role: 'assistant',
-          content: `Error: ${error instanceof Error ? error.message : 'Unknown error'}`,
-        },
-      ]);
-    } finally {
-      setIsChatLoading(false);
-    }
+    // Note: Response will be handled by socket event listener
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {

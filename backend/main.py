@@ -430,6 +430,147 @@ async def delete_rule(name: str):
         logger.error(f"Error deleting rule: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Socket.IO event handlers
+async def handle_evaluate_cv_socketio(sid: str, data: dict):
+    """Handle CV evaluation via Socket.IO"""
+    try:
+        session_id = data.get('session_id')
+        cv_content = data.get('cv_content')
+        job_description = data.get('job_description', '')
+        custom_rules = data.get('custom_rules', '')
+        llm_model = data.get('llm_model', 'gemini-2.0-flash')
+
+        if not session_id or not cv_content:
+            await socket_manager.sio.emit('evaluate_cv_error', {
+                'error': 'Missing session_id or cv_content'
+            }, room=sid)
+            return
+
+        # Get or create session
+        session_id, session = session_service.get_or_create_session(session_id)
+
+        # Update session
+        session_service.update_session(
+            session_id,
+            job_description=job_description,
+            custom_rules=custom_rules,
+            llm_model=llm_model
+        )
+
+        # Define handler function
+        def evaluate_handler():
+            agent = HRCVFilterAgent(llm_model_name=llm_model)
+            return agent.evaluate_cv(
+                cv_content=cv_content,
+                job_description=job_description,
+                custom_rules=custom_rules
+            )
+
+        # Enqueue request
+        request_id = await request_queue.enqueue(
+            session_id=session_id,
+            request_type="evaluate_cv",
+            handler=evaluate_handler
+        )
+
+        # Wait for completion
+        queued_request = await request_queue.wait_for_request(request_id, timeout=300)
+
+        if queued_request.status.value == "failed":
+            await socket_manager.sio.emit('evaluate_cv_error', {
+                'error': queued_request.error
+            }, room=sid)
+        else:
+            await socket_manager.sio.emit('evaluate_cv_complete', {
+                'session_id': session_id,
+                'evaluation': queued_request.result
+            }, room=sid)
+
+    except asyncio.TimeoutError:
+        await socket_manager.sio.emit('evaluate_cv_error', {
+            'error': 'Request timed out'
+        }, room=sid)
+    except Exception as e:
+        logger.error(f"Error in evaluate_cv_socketio: {str(e)}")
+        await socket_manager.sio.emit('evaluate_cv_error', {
+            'error': str(e)
+        }, room=sid)
+
+async def handle_chat_socketio(sid: str, data: dict):
+    """Handle chat via Socket.IO"""
+    try:
+        session_id = data.get('session_id')
+        message = data.get('message')
+        job_description = data.get('job_description', '')
+        custom_rules = data.get('custom_rules', '')
+        cv_evaluations = data.get('cv_evaluations', [])
+        chat_history = data.get('chat_history', [])
+        llm_model = data.get('llm_model', 'gemini-2.0-flash')
+
+        if not session_id or not message:
+            await socket_manager.sio.emit('chat_error', {
+                'error': 'Missing session_id or message'
+            }, room=sid)
+            return
+
+        # Get or create session
+        session_id, session = session_service.get_or_create_session(session_id)
+
+        # Update session
+        session_service.update_session(
+            session_id,
+            job_description=job_description,
+            custom_rules=custom_rules,
+            llm_model=llm_model
+        )
+
+        # Add user message to session
+        session_service.add_chat_message(session_id, "user", message)
+
+        # Define handler function
+        def chat_handler():
+            agent = HRCVFilterAgent(llm_model_name=llm_model)
+            return agent.chat(
+                message=message,
+                job_description=job_description,
+                custom_rules=custom_rules,
+                cv_evaluations=cv_evaluations,
+                chat_history=chat_history
+            )
+
+        # Enqueue request
+        request_id = await request_queue.enqueue(
+            session_id=session_id,
+            request_type="chat",
+            handler=chat_handler
+        )
+
+        # Wait for completion
+        queued_request = await request_queue.wait_for_request(request_id, timeout=300)
+
+        if queued_request.status.value == "failed":
+            await socket_manager.sio.emit('chat_error', {
+                'error': queued_request.error
+            }, room=sid)
+        else:
+            # Add assistant message to session
+            session_service.add_chat_message(session_id, "assistant", queued_request.result)
+
+            await socket_manager.sio.emit('chat_complete', {
+                'session_id': session_id,
+                'response': queued_request.result
+            }, room=sid)
+
+    except asyncio.TimeoutError:
+        await socket_manager.sio.emit('chat_error', {
+            'error': 'Request timed out'
+        }, room=sid)
+    except Exception as e:
+        logger.error(f"Error in chat_socketio: {str(e)}")
+        await socket_manager.sio.emit('chat_error', {
+            'error': str(e)
+        }, room=sid)
+
 # Mount Socket.IO app
 socket_app = socket_manager.get_asgi_app()
 app.mount("/socket.io", socket_app)

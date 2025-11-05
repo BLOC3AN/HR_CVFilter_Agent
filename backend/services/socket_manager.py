@@ -3,9 +3,9 @@ Socket.IO Manager for real-time communication
 """
 import socketio
 from typing import Dict, Any, Optional
-import logging
+from src.utils.logger import Logger
 
-logger = logging.getLogger(__name__)
+logger = Logger(__name__)
 
 class SocketManager:
     """Manages Socket.IO connections and events"""
@@ -24,6 +24,9 @@ class SocketManager:
 
         # Setup event handlers
         self._setup_handlers()
+
+        # Create ASGI app once
+        self.asgi_app = socketio.ASGIApp(self.sio)
 
         logger.info("✅ SocketManager initialized")
     
@@ -59,6 +62,22 @@ class SocketManager:
                 await self.sio.emit('session_registered', {'session_id': session_id}, room=sid)
             else:
                 logger.warning(f"⚠️ No session_id in register_session data: {data}")
+
+        @self.sio.event
+        async def evaluate_cv(sid, data):
+            """Handle CV evaluation request via Socket.IO"""
+            logger.info(f"📥 Received evaluate_cv from {sid}: {data.get('session_id')}")
+            # Import here to avoid circular dependency
+            from backend.main import handle_evaluate_cv_socketio
+            await handle_evaluate_cv_socketio(sid, data)
+
+        @self.sio.event
+        async def chat(sid, data):
+            """Handle chat request via Socket.IO"""
+            logger.info(f"📥 Received chat from {sid}: {data.get('session_id')}")
+            # Import here to avoid circular dependency
+            from backend.main import handle_chat_socketio
+            await handle_chat_socketio(sid, data)
     
     async def emit_to_session(self, session_id: str, event: str, data: Dict[str, Any]):
         """Emit event to specific session"""
@@ -114,5 +133,5 @@ class SocketManager:
     
     def get_asgi_app(self):
         """Get ASGI app for mounting"""
-        return socketio.ASGIApp(self.sio)
+        return self.asgi_app
 
